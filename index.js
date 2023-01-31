@@ -1,10 +1,12 @@
-import express from "express";
-import { createServer } from "http";
-import cors from "cors";
+const express = require("express");
+const { createServer } = require("http");
+const cors = require("cors");
+const { Server } = require("socket.io");
 
 const app = express();
 const server = createServer(app);
-import { Server } from "socket.io";
+
+let connectedClients = [];
 
 const io = new Server(server, {
   cors: {
@@ -21,16 +23,47 @@ app.get("/", (req, res) => {
 });
 
 io.on("connection", (socket) => {
+  connectedClients.push({ id: socket.id, count: 0 });
+  console.log(`Client connected with id: ${socket.id}`);
+
+  socket.on("disconnect", () => {
+    // Remove the disconnected socket
+    connectedClients = connectedClients.filter(
+      (client) => client.id !== socket.id
+    );
+    console.log(`Client disconnected with id: ${socket.id}`);
+  });
   socket.on("server-message", (msg) => {
-    io.emit("image-review-data", { data: msg });
-    console.log(`server: ${msg}`);
+    const currentClient = getCurrentClient([...connectedClients.slice(1)]);
+    connectedClients = connectedClients.map((client) => {
+      if (client.id === currentClient.id) {
+        return { id: client.id, count: client.count + 1 };
+      }
+      return client;
+    });
+
+    io.to(currentClient.id).emit("image-review-data", { data: msg });
   });
   socket.on("image-resolve-data", (data) => {
+    connectedClients = connectedClients.map((client) => {
+      if (client.id === socket.id) {
+        return { id: client.id, count: client.count - 1 };
+      }
+      return client;
+    });
     io.emit("server-data", data);
-    console.log(`client: ${JSON.stringify(data)}`);
   });
 });
 
 server.listen(port, () => {
   console.log(`Local: http://localhost:${port}`);
 });
+
+function getCurrentClient(connectedClients) {
+  if (connectedClients.length === 0) return null;
+  const currentClient = connectedClients.reduce((prev, curr) =>
+    prev.count < curr.count ? prev : curr
+  );
+
+  return currentClient;
+}
