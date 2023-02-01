@@ -35,14 +35,16 @@ io.on("connection", (socket) => {
   });
   socket.on("server-message", (msg) => {
     const currentClient = getCurrentClient([...connectedClients.slice(1)]);
-    connectedClients = connectedClients.map((client) => {
-      if (client.id === currentClient.id) {
-        return { id: client.id, count: client.count + 1 };
-      }
-      return client;
-    });
+    if (currentClient) {
+      connectedClients = connectedClients.map((client) => {
+        if (client.id === currentClient.id) {
+          return { id: client.id, count: client.count + 1 };
+        }
+        return client;
+      });
 
-    io.to(currentClient.id).emit("image-review-data", { data: msg });
+      io.to(currentClient.id).emit("image-review-data", { data: msg });
+    }
   });
   socket.on("image-resolve-data", (data) => {
     connectedClients = connectedClients.map((client) => {
