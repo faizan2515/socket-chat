@@ -1,12 +1,15 @@
 const express = require("express");
 const { createServer } = require("http");
 const cors = require("cors");
+const path = require("path");
+const fs = require("fs");
 const { Server } = require("socket.io");
 
 const app = express();
 const server = createServer(app);
 
 let connectedClients = [];
+let imageCount = 1;
 
 const io = new Server(server, {
   cors: {
@@ -43,7 +46,14 @@ io.on("connection", (socket) => {
         return client;
       });
 
-      io.to(currentClient.id).emit("image-review-data", { data: msg });
+      io.to(currentClient.id).emit("image-review-data", {
+        image: true,
+        buffer: fs.readFileSync(
+          path.join(__dirname, "images", `${imageCount}.jpeg`)
+        ),
+      });
+      imageCount += 1;
+      if (imageCount === 9) imageCount = 1;
     }
   });
   socket.on("image-resolve-data", (data) => {
