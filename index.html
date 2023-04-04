@@ -3,6 +3,33 @@
   <head>
     <title>Socket.IO Server</title>
   </head>
+  <style>
+    *,
+    *:before,
+    *:after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    li {
+      list-style: none;
+    }
+    #messages,
+    #form {
+      padding: 1rem;
+    }
+    #messages {
+      display: flex;
+      flex-direction: column;
+    }
+    .message {
+      display: inline-block;
+      width: fit-content;
+      padding: 0.5rem;
+      border: 1px solid black;
+      margin-block: 0.5rem;
+    }
+  </style>
   <body>
     <ul id="messages"></ul>
     <form id="form" action="">
@@ -16,19 +43,38 @@
       const form = document.getElementById("form");
       const input = document.getElementById("input");
       const message = document.getElementById("message");
-
       form.addEventListener("submit", function (e) {
         e.preventDefault();
         if (input.value) {
-          socket.emit("server-message", input.value);
+          socket.emit("send-message", input.value);
           input.value = "";
         }
       });
 
-      socket.on("server-data", function (data) {
-        const item = document.createElement("li");
-        item.textContent = JSON.stringify(data);
-        messages.appendChild(item);
+      socket.on("receive-message", function ({ id, message }) {
+        const para = document.createElement("p");
+        const span = document.createElement("span");
+        const li = document.createElement("li");
+        para.textContent = `User: ${id}`;
+        span.textContent = `Message: ${message}`;
+        li.classList.add("message");
+        li.appendChild(para);
+        li.appendChild(span);
+        messages.appendChild(li);
+        window.scrollTo(0, document.body.scrollHeight);
+      });
+
+      socket.on("user-connected", function ({ id }) {
+        const li = document.createElement("li");
+        li.textContent = `User: ${id} connected`;
+        messages.appendChild(li);
+        window.scrollTo(0, document.body.scrollHeight);
+      });
+
+      socket.on("user-disconnected", function ({ id }) {
+        const li = document.createElement("li");
+        li.textContent = `User: ${id} disconnected`;
+        messages.appendChild(li);
         window.scrollTo(0, document.body.scrollHeight);
       });
     </script>
